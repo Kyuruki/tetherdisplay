@@ -66,3 +66,50 @@ Expected:
 - Second display never appears though the tool says OK → confirm the new `\\.\DISPLAYn` in Display
   Settings; check Device Manager for the Parsec adapter. **[VERIFY-ON-HW]** the new-monitor detection
   (set-difference) on your machine.
+
+---
+
+## M1.2 — Capture the virtual display
+
+Goal/gate: `frame.bmp` written by the capture sandbox shows the **virtual display's** contents (not
+your primary screen), captured onto the NVIDIA adapter.
+
+### 1. Build
+
+```
+cmake --build build --config Debug --target td_capture_sandbox
+```
+
+### 2. Capture the virtual display (the gate)
+
+Use the `\\.\DISPLAYn` device name that the **M1.1** sandbox printed for the virtual display:
+
+```
+build\windows-host\capture\Debug\td_capture_sandbox.exe "\\.\DISPLAY3"
+```
+
+(With the M1.1 virtual display active — run `td_vdd_sandbox` in another window, or wire them together
+later.) Expected: it prints a frame count, the resolution, `crossed_adapters=yes|no`, and writes
+`frame.bmp`. **Open `frame.bmp`** — it must show the virtual second display's contents. Put a
+recognizable window on that display first so you can tell it apart from the primary.
+
+### 3. (Optional) prove the cross-adapter bridge on this hardware
+
+```
+build\windows-host\capture\Debug\td_capture_sandbox.exe --test-cross-adapter
+```
+
+Expected: `Cross-adapter round-trip pixel check: PASS`. If it prints `Init FAILED`, the keyed-mutex
+share isn't supported across your iGPU/dGPU — that's fine: the primary path captures directly on the
+NVIDIA adapter and doesn't use this bridge (it exists only as a fallback). **[VERIFY-ON-HW]**
+
+### 4. Troubleshooting
+
+- `Start failed: WgcUnavailable` → Windows.Graphics.Capture needs Win10 1903+; update Windows.
+- `Start failed: MonitorNotFound` → the `\\.\DISPLAYn` you passed isn't attached; re-check the M1.1
+  output (the index can change between sessions).
+- `Start failed: DeviceCreateFailed` → no NVIDIA adapter found, or D3D11 device creation failed.
+- `frame.bmp` shows the wrong/black screen → DRM content is expected to be black (LIMITATIONS); confirm
+  you pointed at the virtual display's device name, not the primary.
+- `crossed_adapters=yes` is informational: it means the virtual display is composited on a different
+  GPU than NVENC and DWM is doing the cross-adapter copy for you. That's expected and fine.
