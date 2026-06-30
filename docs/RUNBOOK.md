@@ -165,3 +165,56 @@ ffplay capture.h265        (or open in VLC)
 - Black video → DRM-protected content renders black on the virtual display (expected; see LIMITATIONS).
 - Very large file / stutter → bitrate too high for later USB streaming; it's capped at ~80 Mbps but you
   can lower `target_bitrate_kbps`.
+
+---
+
+## M2 — usbmux transport, host→device bytes
+
+Goal/gate: the iPad gate app shows the **same byte count + checksum** the host streamed over the USB
+cable. No video yet — this proves the byte pipe.
+
+### 1. Host prerequisites
+
+- **Apple Mobile Device Support** installed (ships with iTunes; can be extracted like Duet does). This
+  provides the **Apple Mobile Device Service** the host talks to at `127.0.0.1:27015` **[VERIFY]** the
+  port on your machine).
+- Plug in the iPad and **Trust** the computer.
+
+### 2. Build the host
+
+```
+cmake --build build --config Debug --target td_usbmux_sandbox
+ctest --test-dir build -C Debug -R "Usbmux|BuildListen|BuildConnect|PlistGet|ParseResult|ParseAttached"
+```
+
+(The `UsbmuxClientMock` integration test runs the full Listen→Connect→tunnel flow against an in-process
+mock daemon — it already passes in CI/WSL, no device needed.)
+
+### 3. Build + launch the iPad gate app
+
+Build `ios-client/M2Gate/GateListener.swift` on a Mac (see `ios-client/README.md`), sideload via
+AltStore, and **launch it** — it listens on TCP port **2345** and shows "Waiting for host".
+
+### 4. Stream bytes (the gate)
+
+```
+build\windows-host\transport\usbmux\Debug\td_usbmux_sandbox.exe 2345 64
+```
+
+It prints e.g. `Sent 65536 bytes, FNV-1a checksum = 0x????????`.
+**Pass:** the iPad app shows the **same** byte count and checksum.
+
+### 5. Troubleshooting
+
+- `WaitForDevice failed: Timeout` → Apple Mobile Device Service not running, or the iPad isn't
+  plugged in / trusted. Confirm the service (and `[VERIFY]` it listens on 27015).
+- `Connect ... ResultConnRefused` → the iPad gate app isn't listening (launch it) or the port doesn't
+  match (host arg vs `gatePort` in GateListener.swift, default 2345).
+- `Connect ... ResultBadDevice` → the DeviceID went away (replug); re-run.
+- Checksums differ → bytes were corrupted/dropped — capture the host vs device totals and report.
+
+### AltStore sideload + 7-day refresh (run from the Windows host)
+
+Install AltServer on the XPS, install the `.ipa` to the iPad, and confirm auto-refresh is configured
+(free provisioning profiles expire every 7 days; AltStore re-signs). **Any iOS code change requires
+rebuilding the `.ipa` on the Mac** — AltStore only refreshes the existing signature.

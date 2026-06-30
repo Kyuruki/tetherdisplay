@@ -28,3 +28,15 @@ No runtime third-party code is linked into the protocol module — it is pure st
 | Component | Reason |
 |-----------|--------|
 | libusbmuxd / libimobiledevice | **GPLv3** — would contaminate a future open-source release. The host speaks the usbmux socket protocol directly instead (clean-room, see §6.4 of the master prompt). |
+
+## Clean-room provenance — usbmux client (M2)
+
+`windows-host/transport/usbmux/` is a clean-room implementation of the public usbmux wire protocol; it
+links no GPL code. The wire format (16-byte LE header, plist messages, `htons` PortNumber, the
+Listen→Connect→raw-tunnel flow, Result codes) was confirmed against **permissively-licensed** references:
+- **pymobiledevice3** `usbmux.py` (MIT) — header framing, plist keys, `socket.htons(port)`, `ITUNES_HOST=('127.0.0.1',27015)`.
+- **Google eDistantObject** `EDOUSBMuxUtil.m` (Apache-2.0) — independent confirmation of the big-endian port + Result handling.
+- **node-usbmux** (MIT) and **The iPhone Wiki** usbmux page.
+The Result/message enum integers (`RESULT_OK=0`, `BADDEV=2`, `CONNREFUSED=3`, `BADVERSION=6`,
+`MESSAGE_PLIST=8`) are present in the permissive references above (pymobiledevice3 / eDistantObject), so
+no GPL header was needed or used. No GPL source is copied or linked.
