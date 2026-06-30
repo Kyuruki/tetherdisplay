@@ -10,8 +10,11 @@ human** before use). `[UNVERIFIED]` marks a license I have not yet confirmed fro
 |-----------|---------|----------|-------|---------|-------|
 | GoogleTest | 1.14.0 | Unit/vector tests | **test only** — not linked into any shipped binary | BSD-3-Clause | Permissive. On Ubuntu built from `/usr/src/googletest`; on Windows via `find_package`/FetchContent. |
 | CMake | ≥3.20 | Build system | dev tool | BSD-3-Clause | Permissive; not distributed. |
+| libsodium | ≥1.0.18 | TOFU pairing (`crypto_sign`/`crypto_kx`) + AEAD channel (`crypto_secretstream`) | **runtime, host** | ISC (permissive) | ADOPTED M5. Verified by `windows-host/crypto` tests against real libsodium. |
+| swift-sodium | latest | The same crypto on iOS (Sodium wrapper over libsodium) | **runtime, iOS** | **ISC** (permissive — corrected, NOT MIT) | ADOPTED M5 via SPM. Underlying libsodium is also ISC. |
 
-No runtime third-party code is linked into the protocol module — it is pure standard C++20.
+The protocol module is pure standard C++20; the only runtime dependency is libsodium (host) /
+swift-sodium (iOS), both ISC.
 
 ## Planned, NOT yet adopted (verify license before use — R6 stop-and-ask)
 

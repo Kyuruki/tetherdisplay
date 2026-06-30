@@ -23,6 +23,7 @@ add_subdirectory(windows-host/transport/usbmux)    # M2 — clean-room usbmux cl
 add_subdirectory(windows-host/vdisplay)            # M1.1 — reuses those GTest targets
 add_subdirectory(windows-host/capture)             # M1.2 — capture + cross-adapter
 add_subdirectory(windows-host/encode)              # M1.3 — NVENC encode (needs td_capture)
+add_subdirectory(windows-host/crypto)              # M5 — TOFU pairing + AEAD (needs libsodium)
 add_subdirectory(windows-host/core)                # M4 — streaming session (needs protocol+capture+encode)
 add_subdirectory(tools/loopback)
 add_subdirectory(tools/stream_keyframe)            # M3 — full host pipeline -> one keyframe to the iPad

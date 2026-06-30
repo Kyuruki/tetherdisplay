@@ -133,8 +133,10 @@ Same layout as ERROR (§2.3). Codes: `0`=normal, `1`=going_away, `2`=error.
 
 ## 6. Reserved for future versions (do not implement in v1)
 
-- Control types `0x30`–`0x3F` are reserved for M5 pairing/auth (TOFU key exchange) and the
-  AEAD-encryption handshake. Adding them is a version bump, not a v1 change.
+- Control types `0x30`–`0x3F` were reserved for M5 pairing/auth. **As implemented, M5 instead places
+  pairing + AEAD encryption in a TRANSPORT layer BELOW §5** (`SecureByteChannel` / `SecureTransport`):
+  the §5 stream runs unchanged on top of the encrypted channel, so §5 stayed v1/frozen and no control
+  types were needed. The 0x30–0x3F space remains reserved. See `docs/SECURITY.md`.
 - `flags` (frame) bit0 and `feature_flags` bit0 are reserved as described above.
 
 ## 7. Error model

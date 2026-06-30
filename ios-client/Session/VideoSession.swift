@@ -17,6 +17,8 @@ final class VideoSession: ObservableObject {
     private let port: UInt16
     private var listener: NWListener?
     private var connection: NWConnection?
+    private var transport: SecureTransport?
+    private let identity = KeychainStore.loadOrCreateIdentity()
     private var parser = FrameParser()
     private let decoder = HEVCDecoder()
     weak var renderer: MetalVideoRenderer?
@@ -53,26 +55,30 @@ final class VideoSession: ObservableObject {
 
     private func accept(_ conn: NWConnection) {
         connection = conn
-        status = "Host connected"
+        status = "Pairing…"
         conn.start(queue: .main)
-        // Announce capabilities and ask for a keyframe to start.
-        send(.hello(Hello(codecMask: Wire.maskHEVC | Wire.maskH264,
-                          maxWidth: 2360, maxHeight: 1640, maxBitrateKbps: 80000, maxFps: 60)))
-        send(.keyframeRequest(KeyframeRequest(reason: 0, lastGoodSeq: 0)))
-        receive(conn)
-    }
-
-    private func receive(_ conn: NWConnection) {
-        conn.receive(minimumIncompleteLength: 1, maximumLength: 1 << 18) { [weak self] data, _, isComplete, error in
+        let t = SecureTransport(connection: conn, identity: identity)
+        transport = t
+        // TOFU: verify against the pinned host identity, or learn it on first pairing.
+        t.establish(pinned: KeychainStore.loadPinnedPeer()) { [weak self] result, learnedPeer in
             Task { @MainActor in
                 guard let self else { return }
-                if let data, !data.isEmpty { self.process(data) }
-                if isComplete || error != nil {
-                    self.status = "Disconnected — replug cable"
+                guard result == .ok else {
+                    self.status = "Pairing failed: \(result)"
                     conn.cancel()
-                } else {
-                    self.receive(conn)
+                    return
                 }
+                if let learnedPeer { KeychainStore.savePinnedPeer(learnedPeer) }
+                self.status = "Paired + encrypted"
+                // Announce capabilities and ask for a keyframe to start (now over the encrypted channel).
+                self.send(.hello(Hello(codecMask: Wire.maskHEVC | Wire.maskH264,
+                                       maxWidth: 2360, maxHeight: 1640, maxBitrateKbps: 80000, maxFps: 60)))
+                self.send(.keyframeRequest(KeyframeRequest(reason: 0, lastGoodSeq: 0)))
+                t.receiveLoop(onPlaintext: { [weak self] bytes in
+                    Task { @MainActor in self?.process(Data(bytes)) }
+                }, onClosed: { [weak self] in
+                    Task { @MainActor in self?.status = "Disconnected — replug cable" }
+                })
             }
         }
     }
@@ -109,7 +115,7 @@ final class VideoSession: ObservableObject {
     }
 
     private func send(_ msg: Message) {
-        connection?.send(content: encode(msg), completion: .contentProcessed { _ in })
+        transport?.send([UInt8](encode(msg)))  // encrypted by the SecureTransport
     }
 }
 
