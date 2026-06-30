@@ -192,6 +192,8 @@ class WgcCaptureSource final : public ICaptureSource {
 
   bool IsCapturing() const override { return capturing_; }
 
+  void* GetDevice() const override { return d3d_.Get(); }
+
  private:
   void OnFrameArrived(wgc::Direct3D11CaptureFramePool const& sender,
                       winrt::Windows::Foundation::IInspectable const&) {

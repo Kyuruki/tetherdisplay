@@ -113,3 +113,55 @@ NVIDIA adapter and doesn't use this bridge (it exists only as a fallback). **[VE
   you pointed at the virtual display's device name, not the primary.
 - `crossed_adapters=yes` is informational: it means the virtual display is composited on a different
   GPU than NVENC and DWM is doing the cross-adapter copy for you. That's expected and fine.
+
+---
+
+## M1.3 — NVENC encode-to-file (the M1 gate)
+
+Goal/gate (completes M1): record a few seconds of the virtual display to a `.h265` file and play it
+back — it must show that desktop at native resolution.
+
+### 1. Prerequisites
+
+- **NVIDIA driver** (GeForce/Studio) — ships `nvEncodeAPI64.dll`; keep it current.
+- **NVIDIA Video Codec SDK** — download from NVIDIA, note the `Interface/` folder (contains
+  `nvEncodeAPI.h`). No `.lib` is needed (the DLL is loaded at runtime).
+- A player: `ffplay`/`ffmpeg` or VLC.
+
+### 2. Build
+
+```
+cmake -S . -B build -DNVENC_INCLUDE_DIR="C:/path/to/Video_Codec_SDK/Interface"
+cmake --build build --config Debug --target td_encode_sandbox
+```
+
+If `NVENC_INCLUDE_DIR` is unset, CMake skips `td_encode`/`td_encode_sandbox` (and says so) but still
+builds the portable encode tests.
+
+### 3. Record (the gate)
+
+With the M1.1 virtual display active, using its `\\.\DISPLAYn` from the M1.1 sandbox:
+
+```
+build\windows-host\encode\Debug\td_encode_sandbox.exe "\\.\DISPLAY3" capture.h265 5
+```
+
+It prints frames/packets/bytes/keyframes. Then **play it back**:
+
+```
+ffplay capture.h265        (or open in VLC)
+```
+
+**Pass:** the video shows the virtual second display's contents at 2360×1640 (or the nearest mode),
+30+ fps. Put a moving window on that display while recording so playback is obviously live.
+
+### 4. Troubleshooting
+
+- `encoder Initialize failed: SdkNotFound` → `nvEncodeAPI64.dll` missing/old; update the NVIDIA driver.
+- `SessionInitFailed` → the GPU/driver doesn't support the requested HEVC low-latency config; try the
+  H.264 path (set `cfg.codec = Codec::H264`) or a newer driver.
+- File won't open in a player → it's a raw HEVC elementary stream; `repeatSPSPPS=1` inlines VPS/SPS/PPS,
+  but some players want a container: `ffmpeg -i capture.h265 -c copy capture.mp4`.
+- Black video → DRM-protected content renders black on the virtual display (expected; see LIMITATIONS).
+- Very large file / stutter → bitrate too high for later USB streaming; it's capped at ~80 Mbps but you
+  can lower `target_bitrate_kbps`.

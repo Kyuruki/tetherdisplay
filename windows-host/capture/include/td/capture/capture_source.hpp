@@ -60,6 +60,11 @@ class ICaptureSource {
   virtual void Stop() = 0;
   virtual bool IsCapturing() const = 0;
 
+  // The ID3D11Device (on the encoder adapter) that owns the delivered textures. Valid after a
+  // successful Start(); nullptr otherwise. The encoder must use this SAME device so it can copy the
+  // captured texture (textures cannot cross devices). Returned as void* to keep this header portable.
+  virtual void* GetDevice() const = 0;
+
  protected:
   ICaptureSource() = default;
 };
