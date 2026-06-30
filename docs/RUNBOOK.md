@@ -1,8 +1,9 @@
 # TetherDisplay RUNBOOK (operator steps the agent cannot run)
 
-Copy-pasteable, ordered steps the human performs on the hardware. Grows one milestone at a time.
-Today it covers **M1.1 — virtual display bring-up**. (M0 needs no operator steps; build/test it with
-`windows-host/transport/protocol/Makefile` on WSL or via CMake on Windows.)
+Copy-pasteable, ordered steps the human performs on the hardware. Covers **M1.1 → M6** below — work
+through them in order; the final "cold-start dry run" (M6) is the project's Definition of Done. (M0 needs
+no operator steps; build/test it with `windows-host/transport/protocol/Makefile` on WSL or via CMake on
+Windows.)
 
 ---
 
@@ -300,3 +301,46 @@ the host forces an IDR in response. Ctrl+C (or disconnecting the iPad) stops the
 - The host orchestration itself (continuous streaming, IDR-on-request, PING→PONG) is covered by the
   `core_test` live-loop test, which runs in CI/WSL with fakes — a host that passes that but fails here
   points at the real capture/encode/transport, not the session logic.
+
+---
+
+## M5 — pairing + encryption + recovery (the M5 gate)
+
+The live stream now pairs (TOFU) and is AEAD-encrypted, and auto-recovers on cable kill/replug.
+
+1. Build `td_stream` (it now links libsodium): `cmake -S . -B build -DNVENC_INCLUDE_DIR=… -DSODIUM_DIR=…`
+   then `cmake --build build --config Debug --target td_stream`.
+2. First run pairs (TOFU): the iPad learns + pins the host identity, the host pins the iPad. Run
+   `td_stream 2345` with the iPad app open; it shows "Paired + encrypted".
+3. **Gate — recovery:** while streaming, **unplug the USB cable**, wait, replug. The host loops back to
+   "waiting for iPad" and re-pairs automatically; the iPad resumes. **Gate — refusal:** install the app
+   on a *different* iPad (different identity) → the host logs `pairing refused (unknown/unpaired device)`
+   and does not stream.
+4. Identity keys live in Windows Credential Manager (host) / Keychain (iPad) — see `docs/SECURITY.md`.
+
+---
+
+## M6 — tray app, config, and the cold-start dry run (the project gate)
+
+### Tray UI
+
+Build `td_tray` (`cmake --build build --config Debug --target td_tray`) and run it. A tray icon appears;
+right-click for **Start / Stop / Quit**. It starts streaming immediately and shows status in the tooltip
+("waiting for iPad…", "streaming (paired)", "pairing refused/failed"). It reads
+`%APPDATA%\TetherDisplay\config.txt` (a plain `key=value` file: `device_port`, `codec=hevc|h264`,
+`target_bitrate_kbps`, `max_bitrate_kbps`, `fps`); values are clamped to safe ranges (the encoder never
+exceeds the USB-2 budget). No secrets are in this file.
+
+### Cold-start dry run (Definition of Done — §10)
+
+From a clean machine, following ONLY this runbook, you should be able to:
+1. Install Apple Mobile Device Support, the Parsec virtual display driver, and (optionally) add the
+   2360×1640 custom resolution. (M1.1, M2)
+2. Build the host (`td_tray` or the per-milestone sandboxes) with the Windows SDK, NVIDIA Video Codec
+   SDK, and libsodium.
+3. Build the iPad app on a Mac (free personal team), sideload + auto-refresh via AltStore. (M2, M3)
+4. Plug in and trust the iPad; launch the iPad app and `td_tray` (or `td_stream`).
+5. See the Windows second screen on the iPad at native resolution, 30+ fps; drag a window onto it.
+6. Pull and replug the cable → it auto-recovers; confirm a different (unpaired) iPad is refused.
+
+If every step above succeeds from a clean state, the project meets its Definition of Done.

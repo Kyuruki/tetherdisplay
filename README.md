@@ -13,16 +13,25 @@ Windows host: virtual display (IddCx) -> capture (WGC) -> NVENC encode (HEVC/H26
 Local-only: **no Wi-Fi, no LAN, no cloud, no telemetry — ever.** The only data path is host↔iPad
 over the cable.
 
-## Status
+## Status — all milestones M0–M6 code-complete
 
-**Milestone M0 — protocol + offline loopback: complete & passing.**
-- Frozen-candidate wire protocol: [`docs/PROTOCOL.md`](docs/PROTOCOL.md)
-- Portable C++20 codec + tests: `windows-host/transport/protocol/`
-- Shared byte-level vectors: `protocol/test-vectors/`
-- In-process loopback gate: `tools/loopback/`
+| Milestone | What | Verification |
+|---|---|---|
+| **M0** | §5 wire protocol + offline loopback | 29 protocol tests + loopback (WSL) |
+| **M1.1** | Virtual display (Parsec VDD behind `IVirtualDisplay`) | 8 vdisplay tests; Win32 vs verified IOCTLs |
+| **M1.2** | WGC capture on the NVIDIA adapter + cross-adapter bridge | 7 capture tests; verified WGC/D3D11 docs |
+| **M1.3** | NVENC low-latency HEVC encode-to-file | 8 encode tests; line-cited NVENC recipe |
+| **M2** | Clean-room usbmux transport (host→device bytes) | 13 usbmux tests incl. full mock-daemon flow |
+| **M3** | iPad VideoToolbox decode + Metal render (§5 frozen) | Swift §5 codec vs the SAME vectors |
+| **M4** | Full live pipeline (continuous streaming session) | 11 core tests incl. off-device live-loop |
+| **M5** | TOFU pairing + AEAD encryption, reconnect, adaptation | 10 crypto tests vs real libsodium |
+| **M6** | Tray UI, config, full docs, cold-start runbook | 17 core tests (config); docs complete |
 
-Next: **M1** (virtual display + capture + NVENC encode-to-file). See the milestone list in the
-master prompt and `docs/` (to be expanded).
+**93 portable unit tests pass in WSL.** Everything portable (all protocol/codec/policy/crypto logic) is
+compiled and tested by the build agent; all Win32/WinRT/D3D11/NVENC/Swift code is written against
+verified, citation-backed docs (`docs/ARCHITECTURE.md`, `docs/SECURITY.md`) and is **built on Windows /
+Mac and verified on the hardware** by the operator — the agent has no access to the GPU, driver, iPad,
+or Mac. Follow [`docs/RUNBOOK.md`](docs/RUNBOOK.md) for the cold-start bring-up.
 
 ## Repository layout
 

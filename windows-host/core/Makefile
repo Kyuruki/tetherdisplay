@@ -15,8 +15,9 @@ GTEST_INC := -I$(GTEST_DIR)/include -I$(GTEST_DIR)
 GTEST_SRC := $(GTEST_DIR)/src/gtest-all.cc $(GTEST_DIR)/src/gtest_main.cc
 
 BUILD := build
-SRCS  := src/control_plane.cpp src/streaming_session.cpp $(PROTO)/src/wire.cpp
-TESTS := tests/control_plane_test.cpp tests/streaming_session_test.cpp tests/bitrate_controller_test.cpp
+SRCS  := src/control_plane.cpp src/streaming_session.cpp src/config.cpp $(PROTO)/src/wire.cpp
+TESTS := tests/control_plane_test.cpp tests/streaming_session_test.cpp tests/bitrate_controller_test.cpp \
+         tests/config_test.cpp
 
 .PHONY: test clean
 $(BUILD):
