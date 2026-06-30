@@ -24,3 +24,4 @@ add_subdirectory(windows-host/vdisplay)            # M1.1 — reuses those GTest
 add_subdirectory(windows-host/capture)             # M1.2 — capture + cross-adapter
 add_subdirectory(windows-host/encode)              # M1.3 — NVENC encode (needs td_capture)
 add_subdirectory(tools/loopback)
+add_subdirectory(tools/stream_keyframe)            # M3 — full host pipeline -> one keyframe to the iPad

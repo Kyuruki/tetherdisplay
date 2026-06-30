@@ -218,3 +218,43 @@ It prints e.g. `Sent 65536 bytes, FNV-1a checksum = 0x????????`.
 Install AltServer on the XPS, install the `.ipa` to the iPad, and confirm auto-refresh is configured
 (free provisioning profiles expire every 7 days; AltStore re-signs). **Any iOS code change requires
 rebuilding the `.ipa` on the Mac** — AltStore only refreshes the existing signature.
+
+---
+
+## M3 — decode + render a single keyframe (the M3 gate)
+
+Goal/gate: one real captured frame from the host appears on the iPad. Also freezes §5 (both endpoints
+now pass `protocol/test-vectors/`).
+
+### 1. iOS app (build on Mac)
+
+Use the M3 SwiftUI app target containing `Transport/WireProtocol.swift`, `Decode/HEVCDecoder.swift`,
+`Render/MetalVideoView.swift`, `Render/Shaders.metal`, `Session/VideoSession.swift` with `M3ContentView`
+as the root view. Add `Tests/WireProtocolTests.swift` to a test target and run it — it validates the
+Swift codec against the shared `protocol/test-vectors/` (the §5 freeze check). Sideload + launch; it
+listens on port 2345 and shows "Waiting for host".
+
+### 2. Host (Windows)
+
+Build the full-pipeline sandbox (needs the virtual display driver + NVENC + Apple Mobile Device Service):
+
+```
+cmake --build build --config Debug --target td_stream_keyframe
+build\tools\stream_keyframe\Debug\td_stream_keyframe.exe 2345
+```
+
+It brings up the virtual display, captures one frame, NVENC-encodes it as an IDR, frames it as a §5
+VIDEO_FRAME, and sends it over usbmux.
+
+### 3. Verify (the gate)
+
+The iPad shows the captured keyframe (drag a recognizable window onto the virtual display first). The
+status line shows "Rendering W×H" and frames decoded ≥ 1.
+
+### 4. Troubleshooting
+
+- iPad stays "Waiting for host" → the host couldn't connect (check `td_stream_keyframe` output;
+  ResultConnRefused = the app isn't listening / wrong port).
+- "HEVC HW decode unsupported" → every iPadOS-18 device supports it; check the build/runtime.
+- Garbled/wrong colors → BT.709 video-range matrix or NV12 plane mapping; report what you see.
+- Black frame → DRM content (expected) or the capture pointed at the wrong display.

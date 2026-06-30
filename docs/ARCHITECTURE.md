@@ -73,3 +73,34 @@ across two different-IHV adapters is historically driver-finicky → `[VERIFY-ON
   `ID3D11Device1::OpenSharedResource1`, `IDXGIKeyedMutex::AcquireSync`,
   `direct3darticles/surface-sharing-between-windows-graphics-apis`, `direct3d12/shared-heaps` (MS Learn).
 - Enumeration: `DXGI_OUTPUT_DESC`, `IDXGIFactory1::EnumAdapters1`, `IDXGIAdapter1::GetDesc1` (MS Learn).
+
+---
+
+## Decode + render (M3) — verified against Apple docs
+
+iPad side (`ios-client/`), Swift. The host pushes an HEVC access unit as a §5 `VIDEO_FRAME`; the iPad
+decodes it with VideoToolbox and renders with Metal.
+
+**Decode (`Decode/HEVCDecoder.swift`):**
+1. Split the Annex-B access unit into NAL units (HEVC `nal_type = (firstByte >> 1) & 0x3F`).
+2. From VPS(32)/SPS(33)/PPS(34) build a `CMVideoFormatDescription` via
+   `CMVideoFormatDescriptionCreateFromHEVCParameterSets(count: 3, …, nalUnitHeaderLength: 4)` — raw NALs,
+   no start code, emulation-prevention bytes intact.
+3. **Key gotcha:** VideoToolbox wants **HVCC** (4-byte big-endian length prefix per NAL), NOT Annex-B
+   start codes. Strip the param-set NALs (already in the format desc) and length-prefix the VCL slice
+   NAL(s); wrap in `CMBlockBuffer` + `CMSampleBufferCreateReady`.
+4. `VTDecompressionSessionCreate` (decoderSpecification nil = auto HW; destination
+   `kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange` NV12 + `kCVPixelBufferMetalCompatibilityKey`) →
+   `VTDecompressionSessionDecodeFrame` → `CVPixelBuffer` in the output callback. No entitlement needed;
+   `VTIsHardwareDecodeSupported(kCMVideoCodecType_HEVC)` gates it.
+
+**Render (`Render/MetalVideoView.swift` + `Shaders.metal`):** wrap the NV12 planes as Metal textures via
+`CVMetalTextureCache` (plane 0 Y `.r8Unorm`, plane 1 CbCr `.rg8Unorm`) and draw a full-screen triangle
+with a fragment shader doing **BT.709 video-range** YCbCr→RGB. The video-range coefficients (luma
+`1.164384`=255/219, `1.792741`, `−0.213249`, `−0.532909`, `2.112402`, offsets `16/255`, `128/255`) avoid
+the washed-out/oversaturated output §7.3 warns about.
+
+### Sources (fetched 2026-06-29)
+- `CMVideoFormatDescriptionCreateFromHEVCParameterSets`, `VTDecompressionSessionCreate/DecodeFrame`,
+  `VTIsHardwareDecodeSupported`, `kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange`,
+  `CVMetalTextureCacheCreateTextureFromImage` (Apple Developer docs); BT.709 video-range matrix.
