@@ -258,3 +258,45 @@ status line shows "Rendering W×H" and frames decoded ≥ 1.
 - "HEVC HW decode unsupported" → every iPadOS-18 device supports it; check the build/runtime.
 - Garbled/wrong colors → BT.709 video-range matrix or NV12 plane mapping; report what you see.
 - Black frame → DRM content (expected) or the capture pointed at the wrong display.
+
+---
+
+## M4 — full live pipeline (the M4 gate)
+
+Goal/gate: the iPad shows the **live** Windows second screen with usable latency; drag a window onto it.
+
+### 1. Build
+
+```
+cmake --build build --config Debug --target td_stream
+```
+
+### 2. Run
+
+Launch the iPad app (M3ContentView, listening on 2345). Then on the host:
+
+```
+build\tools\stream\Debug\td_stream.exe 2345
+```
+
+It brings up the virtual display and streams continuously (capture → NVENC → §5 → usbmux). The iPad's
+`VideoSession` decodes every frame and renders the latest; it sends a KEYFRAME_REQUEST at startup, and
+the host forces an IDR in response. Ctrl+C (or disconnecting the iPad) stops the host.
+
+### 3. Verify (the gate)
+
+- The iPad shows your Windows second display **live**. Drag a window onto the virtual display (in
+  Windows Display Settings it's the 2360×1640 monitor) and watch it appear on the iPad.
+- Latency should feel usable (tens of ms is expected and good — see §5 of this runbook for a low-tech
+  measurement; sub-10 ms claims are marketing).
+
+### 4. Troubleshooting
+
+- iPad shows the first frame then freezes → frames are arriving but not decoding; check that subsequent
+  VIDEO_FRAMEs are deltas referencing the IDR (the host logs frames sent).
+- Stutter / growing latency → bitrate too high for USB-2; lower `target_bitrate_kbps` in `td_stream`
+  (bitrate adaptation under load is M5).
+- "no second display" → the virtual display driver (M1.1) or Apple Mobile Device Service isn't up.
+- The host orchestration itself (continuous streaming, IDR-on-request, PING→PONG) is covered by the
+  `core_test` live-loop test, which runs in CI/WSL with fakes — a host that passes that but fails here
+  points at the real capture/encode/transport, not the session logic.

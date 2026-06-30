@@ -134,6 +134,16 @@ Tunnel& Tunnel::operator=(Tunnel&& o) noexcept {
   return *this;
 }
 
+void Tunnel::Shutdown() {
+  if (sock_ >= 0) {
+#if defined(_WIN32)
+    ::shutdown(as_sock(sock_), SD_BOTH);
+#else
+    ::shutdown(as_sock(sock_), SHUT_RDWR);
+#endif
+  }
+}
+
 void Tunnel::Close() {
   if (sock_ >= 0) {
     close_sock(as_sock(sock_));

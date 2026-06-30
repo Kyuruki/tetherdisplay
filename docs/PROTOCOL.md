@@ -1,9 +1,9 @@
-# TetherDisplay Wire Protocol — v1 (FREEZE-CANDIDATE)
+# TetherDisplay Wire Protocol — v1 (FROZEN)
 
 > Single source of truth for the on-the-wire bytes. Both `windows-host` and `ios-client`
 > implement exactly this and are validated against `protocol/test-vectors/`.
-> **Status:** freeze-candidate. Frozen once host (M0) **and** iPad (M3) both pass the vectors.
-> After freeze, any change requires a `PROTOCOL_VERSION` bump **and** human sign-off (R6).
+> **Status: FROZEN (2026-06-29).** The host (M0) and iPad (M3) both pass the shared vectors.
+> Any change now requires a `PROTOCOL_VERSION` bump **and** human sign-off (R6).
 
 ## 0. Conventions
 

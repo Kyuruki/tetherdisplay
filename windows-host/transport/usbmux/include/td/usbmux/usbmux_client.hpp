@@ -41,6 +41,9 @@ class Tunnel {
   bool valid() const { return sock_ >= 0; }
   bool SendAll(std::span<const std::uint8_t> data);      // sends everything or returns false
   std::int64_t Recv(std::span<std::uint8_t> buf);        // >0 bytes, 0 = peer closed, <0 = error
+  // Shut down both directions to wake a Recv/SendAll blocked on another thread (without closing the fd,
+  // which a bare close() does not reliably do on POSIX). Use this to cancel a blocked transfer.
+  void Shutdown();
   void Close();
 
  private:
