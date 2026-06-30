@@ -18,5 +18,6 @@ enable_testing()
 # Path the tests use to locate the shared golden vectors.
 set(TD_VECTORS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/protocol/test-vectors")
 
-add_subdirectory(windows-host/transport/protocol)
+add_subdirectory(windows-host/transport/protocol)  # defines GTest targets via find/fetch
+add_subdirectory(windows-host/vdisplay)            # M1.1 — reuses those GTest targets
 add_subdirectory(tools/loopback)

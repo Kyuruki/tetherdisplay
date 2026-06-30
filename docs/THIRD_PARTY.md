@@ -19,9 +19,9 @@ No runtime third-party code is linked into the protocol module — it is pure st
 |-----------|-------------|-----------|------------------|-----------------|
 | libsodium | AEAD channel + key exchange | M5 | ISC (permissive) | Confirm version + license at adoption; record here. |
 | PeerTalk | iOS USB transport | M2/M3 | MIT (historically) | **[UNVERIFIED]** — confirm from its repo before vendoring. |
-| Parsec Virtual Display Driver | IddCx virtual monitor (Option A) | M1 | **[UNVERIFIED]** | Confirm current license + IOCTL control API before adopting. |
-| VirtualDrivers/Virtual-Display-Driver | IddCx virtual monitor (Option A alt) | M1 | **[UNVERIFIED]** | Confirm current license before adopting; prefer the more permissive of the two. |
-| Microsoft IddCx sample | IddCx virtual monitor (Option B) | M1 (fallback) | MIT (Windows-driver-samples) | Self-sign for private use; cleanest license for a future OSS release. |
+| nomi-san/parsec-vdd (Option A1) | IddCx virtual monitor — drive Parsec's signed VDD | M1 | Wrapper **MIT** (verified 2026-06-29); **driver binary is Parsec PROPRIETARY** (redistributed by Parsec only, pre-signed via SignPath) | **✅ SELECTED — R6-approved 2026-06-29.** Cleanest control: open driver handle → IOCTL add/remove (returns a display index), periodic keep-alive ping, change modes via Win32 Display API. Private-use OK; the proprietary binary is a blocker for **bundling** in a future OSS release — keep behind `IVirtualDisplay`, evaluate Option B before any OSS release. |
+| VirtualDrivers/Virtual-Display-Driver (Option A2) | IddCx virtual monitor — fully open driver | M1 | **MIT** (verified 2026-06-29, Windows repo; full driver source; signed via SignPath) | Control via `vdd_settings.xml` + GUI (VDC) — less programmatic than IOCTL. ⚠️ The **Linux** variant is GPLv3/commercial — do not confuse; re-confirm the chosen release tag's LICENSE at adoption. |
+| Microsoft IddCx sample (Option B) | IddCx virtual monitor — build + self-sign | M1 (OSS-release target) | **MS-PL** (Microsoft Public License — permissive, OSI-approved; **not** MIT) (verified 2026-06-29) | Self-contained + permissive → best OSS-later story; requires self-signing (test cert + trust on the operator's machine). |
 
 ## Explicitly REJECTED
 
