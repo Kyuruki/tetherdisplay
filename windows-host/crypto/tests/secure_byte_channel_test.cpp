@@ -9,6 +9,7 @@
 #include <condition_variable>
 #include <cstdio>
 #include <deque>
+#include <filesystem>
 #include <mutex>
 #include <span>
 #include <string>
@@ -79,15 +80,20 @@ bool recvN(core::IByteChannel& ch, std::size_t n, std::vector<std::uint8_t>& out
   return true;
 }
 
-const char* kHostStore = "/tmp/td-test-host.store";
-const char* kIpadStore = "/tmp/td-test-ipad.store";
-void resetStores() { std::remove(kHostStore); std::remove(kIpadStore); }
+// Store files live in the platform temp dir (a literal "/tmp/..." doesn't exist on Windows).
+std::string tempStore(const char* name) {
+  return (std::filesystem::temp_directory_path() / name).string();
+}
+const std::string kHostStore = tempStore("td-test-host.store");
+const std::string kIpadStore = tempStore("td-test-ipad.store");
+void resetStores() { std::remove(kHostStore.c_str()); std::remove(kIpadStore.c_str()); }
 
 }  // namespace
 
 TEST(FileIdentityStore, RoundTrips) {
-  std::remove("/tmp/td-idstore.bin");
-  FileIdentityStore s("/tmp/td-idstore.bin");
+  const std::string idStore = tempStore("td-idstore.bin");
+  std::remove(idStore.c_str());
+  FileIdentityStore s(idStore);
   EXPECT_FALSE(s.LoadSelf());
   auto id = LoadOrCreateIdentity(s);            // generates + persists
   auto again = s.LoadSelf();
@@ -176,8 +182,9 @@ TEST(SecureByteChannel, UnknownDeviceRefused) {
   // A STRANGER iPad (different identity) connects.
   Pipe pipe;
   Endpoint a(pipe, true), b(pipe, false);
-  std::remove("/tmp/td-stranger.store");
-  FileIdentityStore ss("/tmp/td-stranger.store");
+  const std::string strangerStore = tempStore("td-stranger.store");
+  std::remove(strangerStore.c_str());
+  FileIdentityStore ss(strangerStore);
   Identity stranger = LoadOrCreateIdentity(ss);
 
   SecureByteChannel h, s;
