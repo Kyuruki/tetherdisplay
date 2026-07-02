@@ -59,13 +59,6 @@ make test        # GoogleTest unit + golden-vector suite
 make loopback    # M0 in-process end-to-end gate
 ```
 
-## What this build can and cannot verify itself
-
-This codebase is developed by an agent with **no access to the target hardware**. It produces the
-source and runbooks; a human builds/signs the iOS app, installs the display driver, plugs in the
-iPad, and measures real latency. M0 is fully verifiable in software (pure protocol logic), which
-is why it is complete now; later milestones gate on human, on-device steps.
-
 ## License
 
 Not yet chosen. The project **may be open-sourced later**, so all dependencies are kept
