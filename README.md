@@ -58,9 +58,3 @@ cd windows-host/transport/protocol
 make test        # GoogleTest unit + golden-vector suite
 make loopback    # M0 in-process end-to-end gate
 ```
-
-## License
-
-Not yet chosen. The project **may be open-sourced later**, so all dependencies are kept
-permissive (MIT/BSD/Apache); see [`docs/THIRD_PARTY.md`](docs/THIRD_PARTY.md). Copyleft deps are
-rejected or flagged.
